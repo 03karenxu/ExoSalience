@@ -1,0 +1,5 @@
+lightkurve==2.5.1
+matplotlib==3.10.6
+numpy==1.25.0
+pandas==2.3.3
+torch==2.2.2
