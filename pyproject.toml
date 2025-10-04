@@ -3,7 +3,7 @@ requires = ["hatchling>=1.25"]
 build-backend = "hatchling.build"
 
 [project]
-name = "exo-salience"
+name = "ExoSalience"
 version = "0.1.0"
 description = "..."
 readme = "README.md"
@@ -25,3 +25,6 @@ dependencies = [
 trainer = [
   "torchvision==0.23.0"
 ]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src"]
