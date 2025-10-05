@@ -1,4 +1,5 @@
 import os, json, math, time
+from typing import Optional
 import torch
 import numpy as np
 from torch import nn
@@ -201,7 +202,18 @@ def main():
     import copy
     model.eval()
     model_cpu = copy.deepcopy(model).cpu()
-    scripted = torch.jit.script(model_cpu)
+
+    class AstronetExportWrapper(nn.Module):
+        def __init__(self, base: AstronetMVP):
+            super().__init__()
+            self.base = base
+
+        def forward(self, x_g: torch.Tensor, x_l: torch.Tensor, x_tab: Optional[torch.Tensor] = None):
+            logits, fg, fl, fmap_g, fmap_l = self.base(x_g, x_l, x_tab, return_feature_maps=True)
+            return logits, fg, fl, fmap_g, fmap_l
+
+    export_module = AstronetExportWrapper(model_cpu)
+    scripted = torch.jit.script(export_module)
     scripted.save("model_scripted.pt")
 
     
