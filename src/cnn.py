@@ -33,10 +33,9 @@ class AstronetMVP(nn.Module):
         self.enc_g = CNN1DEncoder(hidden=hidden, kernel_size=k_global)
         self.enc_l = CNN1DEncoder(hidden=hidden, kernel_size=k_local)
 
-        in_dim = hidden + hidden + (tabular_dim if tabular_dim > 0 else 0)
 
         # lin reg. model head
-        self.head = nn.Linear(in_dim, 1) #TODO: add ReLU
+        self.head = nn.LazyLinear(1) #TODO: add ReLU
 
     def forward(self, x_g, x_l, x_tab):
         # feed global & local
