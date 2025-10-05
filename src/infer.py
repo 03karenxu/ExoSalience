@@ -61,6 +61,7 @@ def infer(
         return probs.detach().cpu().tolist()
 
     return {
+        "logits": logits.detach().cpu(),
         "probs": probs.detach().cpu(),
         "global_embed": fg.detach().cpu(),
         "local_embed": fl.detach().cpu(),
