@@ -35,7 +35,12 @@ def _prep_tab(x):
     return t.contiguous()
 
 @torch.inference_mode()
-def infer(x_global, x_local, x_tab: Optional[Union[torch.Tensor, np.ndarray, Sequence]] = None):
+def infer(
+    x_global,
+    x_local,
+    x_tab: Optional[Union[torch.Tensor, np.ndarray, Sequence]] = None,
+    return_feature_maps: bool = False,
+):
     """
     x_global: [T] | [B,T] | [B,1,T]
     x_local : [T] | [B,T] | [B,1,T]
@@ -45,9 +50,20 @@ def infer(x_global, x_local, x_tab: Optional[Union[torch.Tensor, np.ndarray, Seq
     xg = _prep_curve(x_global)
     xl = _prep_curve(x_local)
     if x_tab is None:
-        logits = model(xg, xl)
+        logits, fg, fl, fmap_g, fmap_l = model(xg, xl)
     else:
         xt = _prep_tab(x_tab)
-        logits = model(xg, xl, xt)
+        logits, fg, fl, fmap_g, fmap_l = model(xg, xl, xt)
+
     probs = torch.sigmoid(logits).squeeze(-1)
-    return probs.detach().cpu().tolist()
+
+    if not return_feature_maps:
+        return probs.detach().cpu().tolist()
+
+    return {
+        "probs": probs.detach().cpu(),
+        "global_embed": fg.detach().cpu(),
+        "local_embed": fl.detach().cpu(),
+        "global_feature_map": fmap_g.detach().cpu(),
+        "local_feature_map": fmap_l.detach().cpu(),
+    }

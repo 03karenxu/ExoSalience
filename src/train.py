@@ -1,5 +1,4 @@
 import os, json, math, time
-from typing import Optional
 import torch
 import numpy as np
 from torch import nn
@@ -28,7 +27,8 @@ def train_epoch(model, dloader, optim, criterion):
 
         # feed
         xt = None if xt is None else xt.to(device)
-        logits = model(xg, xl, xt).squeeze(1) # actual
+        logits, *_ = model(xg, xl, xt)
+        logits = logits.squeeze(1) # actual
         loss = criterion(logits, y)
 
         #compute optim
@@ -58,7 +58,8 @@ def evaluate(model, dloader, criterion, threshold: float = 0.5):
         y = y.to(device)
         xt = None if xt is None else xt.to(device)
 
-        logits = model(xg, xl, xt).squeeze(1)
+        logits, *_ = model(xg, xl, xt)
+        logits = logits.squeeze(1)
         loss = criterion(logits, y)
         probs = torch.sigmoid(logits)
         preds = (probs >= threshold).float()
@@ -99,7 +100,8 @@ def predict_on_loader(model, dloader):
     for xg, xl, xt, y, ids in dloader:
         xg = xg.to(device); xl = xl.to(device)
         xt = None if xt is None else xt.to(device).float()
-        logits = model(xg, xl, xt).squeeze(1)          # [B]
+        logits, *_ = model(xg, xl, xt)
+        logits = logits.squeeze(1)          # [B]
         probs  = torch.sigmoid(logits)
         for _id, lo, pr in zip(ids, logits.cpu().tolist(), probs.cpu().tolist()):
             out.append({"id": _id, "logit": float(lo), "prob": float(pr)})
@@ -203,17 +205,7 @@ def main():
     model.eval()
     model_cpu = copy.deepcopy(model).cpu()
 
-    class AstronetExportWrapper(nn.Module):
-        def __init__(self, base: AstronetMVP):
-            super().__init__()
-            self.base = base
-
-        def forward(self, x_g: torch.Tensor, x_l: torch.Tensor, x_tab: Optional[torch.Tensor] = None):
-            logits, fg, fl, fmap_g, fmap_l = self.base(x_g, x_l, x_tab, return_feature_maps=True)
-            return logits, fg, fl, fmap_g, fmap_l
-
-    export_module = AstronetExportWrapper(model_cpu)
-    scripted = torch.jit.script(export_module)
+    scripted = torch.jit.script(model_cpu)
     scripted.save("model_scripted.pt")
 
     

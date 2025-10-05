@@ -20,13 +20,11 @@ class CNN1DEncoder(nn.Module):
         # global avg pool over time
         self.gap = nn.AdaptiveAvgPool1d(1)   # -> [B, hidden, 1]
 
-    def forward(self, x, return_feature_map: bool = False):
+    def forward(self, x):
         z = self.features(x)
         z_gap = self.gap(z)
         z_embed = z_gap.squeeze(-1)
-        if return_feature_map:
-            return z_embed, z
-        return z_embed
+        return z_embed, z
     
 class AstronetMVP(nn.Module):
     """
@@ -41,25 +39,15 @@ class AstronetMVP(nn.Module):
         # lin reg. model head
         self.head = nn.LazyLinear(1) #TODO: add ReLU
 
-    def forward(self, x_g, x_l, x_tab:Optional[Tensor], *, return_feature_maps: bool = False): # not using tab for now
+    def forward(self, x_g, x_l, x_tab:Optional[Tensor]=None): # not using tab for now
         # feed global & local
-        need_maps = return_feature_maps
-        enc_g_out = self.enc_g(x_g, return_feature_map=need_maps)
-        enc_l_out = self.enc_l(x_l, return_feature_map=need_maps)
-
-        if need_maps:
-            fg, fmap_g = enc_g_out
-            fl, fmap_l = enc_l_out
-        else:
-            fg = enc_g_out
-            fl = enc_l_out
+        fg, fmap_g = self.enc_g(x_g)
+        fl, fmap_l = self.enc_l(x_l)
 
         # concat global + local
         f = torch.cat([fg,fl],dim=1)
 
         # feed to lin reg model
         logits = self.head(f)
-        if return_feature_maps:
-            return logits, fg, fl, fmap_g, fmap_l
-        return logits
+        return logits, fg, fl, fmap_g, fmap_l
     
