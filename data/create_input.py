@@ -91,9 +91,6 @@ class FLAGS:
 
   output_dir = "test_output/"
 
-  num_train_shards = 1
-  num_worker_processes = 1
-
 # label column name and allowed values
 _LABEL_COLUMN = "av_training_set"
 _ALLOWED_LABELS = {"PC", "AFP", "NTP"}
@@ -126,7 +123,11 @@ def _process_set(tce_table, file_name):
   label = []
   tabular = []
 
+  rows_processed = 0
+  total_rows = len(tce_table)
   for _, tce in tce_table.iterrows():
+    if rows_processed % 100 == 0:
+      print(f"Progress: {rows_processed}/{total_rows}", end="\r")
     result = _process_tce(tce)
     
     if result is not None:
@@ -135,7 +136,11 @@ def _process_set(tce_table, file_name):
       kepid.append(result["kepid"])
       label.append(result["label"])
       tabular.append(result["tabular"])
-      
+
+    rows_processed += 1
+
+  print("\nDone reading TCE csv")
+
   # convert to stacked np array
   global_views_arr = np.stack(global_views)
   local_views_arr = np.stack(local_views)
@@ -151,8 +156,10 @@ def _process_set(tce_table, file_name):
     global_view=global_views_arr,
     local_view=local_views_arr,
     kepid=kepid,
-    label=labels_int
+    label=labels_int,
+    tabular=tabular
   )
+  print(f"{output_path} generated")
 
 
 def main():
