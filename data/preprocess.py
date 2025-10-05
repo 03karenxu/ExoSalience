@@ -233,7 +233,6 @@ def generate_dict_for_tce(time, flux, tce):
     time, flux = phase_fold_and_sort_light_curve(time, flux, period, t0)
 
     EXCLUDED_KEYS = {
-      "tce_period", "tce_duration", "tce_time0bk", 
       "av_training_set", "kepid", "loc_rowid"
     }
 
