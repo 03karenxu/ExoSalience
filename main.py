@@ -5,8 +5,9 @@ import torch
 import numpy as np
 import tempfile
 import subprocess
-from fastapi import FastAPI
-from pydantic import BaseModel, UploadFile, File, HTTPException
+from fastapi import FastAPI, Uploadfile, File
+from pydantic import BaseModel
+from zipfile import ZipFile
 from src.infer import infer
 
 app = FastAPI()
@@ -23,7 +24,7 @@ class Output(BaseModel):
 app = FastAPI()
 
 @app.post("/upload", responseModel=Output)
-async def upload_data(csv: UploadFile = File(...), fits: UploadFile = File(...)):
+async def upload_data(csv: UploadFile = File(...), zip: UploadFile = File(...)):
 
     # save csv to tmpfile
     tmp_csv = tempfile.NamedTemporaryFile(delete=False, suffix=".csv")
@@ -31,20 +32,28 @@ async def upload_data(csv: UploadFile = File(...), fits: UploadFile = File(...))
     content = await csv.read()
     tmp_csv.write(content)
 
-    # save fits to tmpfile
-    tmp_fits = tempfile.NamedTemporaryFile(delete=False, suffix='.fits')
-    fits_path = tmp_fits.name
-    content = await fits.read()
-    tmp_fits.write(content)
+    # save zip to tmp directory
+    tmp_zip = tempfile.NamedTemporaryFile(delete=False, suffix=".zip")
+    zip_path = tmp_zip.name
+
+    tmp_dir = tempfile.mkdtemp() # out dir
+    try:
+        # Open the ZIP file in read mode ('r')
+        with ZipFile(zip_path, 'r') as zip_object:
+            # Extract all contents to the specified directory
+            zip_object.extractall(tmp_dir)
+    except Exception as e:
+        print(f"An error occurred during extraction")
 
     # run create_input on tmp csv and tmp fits
     subprocess.run(
-                ["python", "data/create_input.py", f"--input_tce_csv_file {csv_path}", f"--kepler_data_dir {fits_path}", f"--output_dir {_PATH_TO_OUTPUT}"],
+                ["python", "data/create_input.py", f"--input_tce_csv_file {csv_path}", f"--kepler_data_dir {tmp_dir}", f"--output_dir {_PATH_TO_OUTPUT}"],
                 check=True
             )
 
     os.remove(csv_path)
-    os.remove(fits_path)
+    os.remove(zip_path)
+    os.remove(tmp_dir)
 
     # open the output .npz
     data = np.load(_PATH_TO_OUTPUT)
