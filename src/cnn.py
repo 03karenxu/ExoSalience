@@ -1,5 +1,7 @@
+from typing import Optional
 import torch
 import torch.nn as nn
+from torch import Tensor
 
 class CNN1DEncoder(nn.Module):
     """
@@ -37,7 +39,7 @@ class AstronetMVP(nn.Module):
         # lin reg. model head
         self.head = nn.LazyLinear(1) #TODO: add ReLU
 
-    def forward(self, x_g, x_l, x_tab):
+    def forward(self, x_g, x_l, x_tab:Optional[Tensor]): # not using tab for now
         # feed global & local
         fg = self.enc_g(x_g)
         fl = self.enc_l(x_l)
