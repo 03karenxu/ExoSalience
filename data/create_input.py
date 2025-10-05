@@ -85,7 +85,7 @@ import matplotlib.pyplot as plt
 import preprocess
 
 class FLAGS:
-  input_tce_csv_file = "../dr24-tce.csv"
+  input_tce_csv_file = "../dr24-tce-2.csv"
 
   kepler_data_dir = "../tmp"
 
@@ -127,8 +127,11 @@ def _process_set(tce_table, file_name):
   tabular = []
 
   for _, tce in tce_table.iterrows():
-    result = _process_tce(tce)
-    
+    try:
+      result = _process_tce(tce)
+    except Exception:
+      continue
+
     if result is not None:
       global_views.append(result["global_view"])
       local_views.append(result["local_view"])
