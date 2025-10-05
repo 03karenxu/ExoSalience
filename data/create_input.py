@@ -85,9 +85,9 @@ import matplotlib.pyplot as plt
 import preprocess
 
 class FLAGS:
-  input_tce_csv_file = "../test_tce.csv"
+  input_tce_csv_file = "../dr24-tce-2.csv"
 
-  kepler_data_dir = "../lightcurve_data"
+  kepler_data_dir = "../tmp"
 
   output_dir = "test_output/"
 

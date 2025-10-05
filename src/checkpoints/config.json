@@ -2,8 +2,8 @@
   "hidden": 64,
   "k_global": 7,
   "k_local": 5,
-  "tabular_dim": 4,
+  "tabular_dim": 0,
   "lr": 0.001,
   "wd": 1e-05,
-  "pos_weight": 0.9875776171684265
+  "pos_weight": 2.076923131942749
 }

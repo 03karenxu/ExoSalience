@@ -18,7 +18,9 @@ dependencies = [
   "ipykernel==6.30.1",
   "lightkurve==2.5.1",
   "pipreqs==0.5.0",
-  "tinycss2==1.4.0"
+  "tinycss2==1.4.0",
+  "pydl==1.0.1",
+  "astropy==6.1.7"
 ]
 
 [project.optional-dependencies]

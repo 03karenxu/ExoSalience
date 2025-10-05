@@ -26,8 +26,8 @@ class ExoplanetDataset(Dataset):
 
 
         # shape checks
-        assert global_curves.ndim == 3 and global_curves.shape[1] == 1, "global curves wrong shape"
-        assert local_curves.ndim == 3 and local_curves.shape[1] == 1, "local curves wrong shape"
+        assert global_curves.ndim == 2 and global_curves.shape[1] == 2001, "global curves wrong shape"
+        assert local_curves.ndim == 2 and local_curves.shape[1] == 201, "local curves wrong shape"
 
         if tabular is not None:
             assert tabular.ndim == 2, "tabular wrong shape"
@@ -39,8 +39,11 @@ class ExoplanetDataset(Dataset):
         self.xl  = local_curves
         self.xt  = tabular
 
-        # squeeze labels, cast to float for logits
-        self.y   = labels.float()
+        # ensure binary targets for BCE loss (any label >0 becomes 1)
+        labels = labels.float()
+        if labels.ndim > 1:
+            labels = labels.squeeze()
+        self.y   = (labels > 0).float()
 
         self.ids = ids
 
@@ -49,25 +52,23 @@ class ExoplanetDataset(Dataset):
     def __getitem__(self, i:int):
 
         # get items for global lc, local lc, and tabular
-        xg = self.xg[i]
-        xl = self.xl[i]
-        xt = None if self.xt is None else self.xt[i]
-        y = self.y[i] #scalar float
+        xg = self.xg[i].float()
+        xl = self.xl[i].float()
+        xt = None if self.xt is None else self.xt[i].float()
+        y = self.y[i].float() #scalar float
 
         return xg, xl, xt, y, self.ids[i]
 
 def collate(batch):
     xg, xl, xt, y, ids = zip(*batch)
 
-    xg = torch.stack(xg,0)
-    xl = torch.stack(xl,0)
-    y = torch.stack(y, 0)
+    xg = torch.stack(xg, 0).unsqueeze(1)  # (B, 1, 2001)
+    xl = torch.stack(xl, 0).unsqueeze(1)  # (B, 1, 201)
+    y  = torch.stack(y,  0)
 
-    # if tabular exists collate
     if xt[0] is None:
         xt = None
     else:
         xt = torch.stack(xt, 0)
 
     return xg, xl, xt, y, list(ids)
-
