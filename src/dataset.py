@@ -1,5 +1,4 @@
-from typing import Optional
-
+from typing import Optional, Sequence, Union
 import torch
 from torch.utils.data import Dataset
 from torch import Tensor
@@ -15,7 +14,7 @@ class ExoplanetDataset(Dataset):
      Must be properly zip-able
     """
 
-    def __init__(self, global_curves:Tensor, local_curves:Tensor, labels:Tensor, ids:tuple, tabular:Optional[Tensor]=None):
+    def __init__(self, global_curves:Tensor, local_curves:Tensor, labels:Tensor, ids:Sequence[Union[int,str]], tabular:Optional[Tensor]=None):
         
         # length checks
         N = len(labels)

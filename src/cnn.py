@@ -19,7 +19,7 @@ class CNN1DEncoder(nn.Module):
         self.gap = nn.AdaptiveAvgPool1d(1)   # -> [B, hidden, 1]
 
     def forward(self, x):
-        z = self.features
+        z = self.features(x)
         z = self.gap(z)
         z = z.squeeze(-1)
         return z
