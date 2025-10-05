@@ -1,4 +1,6 @@
 from typing import Optional
+
+import torch
 from torch.utils.data import Dataset
 from torch import Tensor
 
@@ -13,17 +15,16 @@ class ExoplanetDataset(Dataset):
      Must be properly zip-able
     """
 
-    def __init__(self, global_curves:Tensor, local_curves:Tensor, labels:Tensor, tabular:Optional[Tensor]=None, ids:Optional[tuple]=None):
+    def __init__(self, global_curves:Tensor, local_curves:Tensor, labels:Tensor, ids:tuple, tabular:Optional[Tensor]=None):
         
         # length checks
         N = len(labels)
         assert len(global_curves) == len(local_curves) == N, "length mismatch"
+        assert len(ids) == N, "length mismatch (ids)"
 
         if tabular is not None:
             assert len(tabular) == N, "length mismatch (tabular)"
 
-        if ids is not None:
-            assert len(ids) == N, "length mismatch (ids)"
 
         # shape checks
         assert global_curves.ndim == 3 and global_curves.shape[1] == 1, "global curves wrong shape"
@@ -41,7 +42,8 @@ class ExoplanetDataset(Dataset):
 
         # squeeze labels, cast to float for logits
         self.y   = labels.float()
-        self.ids = ids # returned if provided (optional)
+
+        self.ids = ids
 
     def __len__(self) -> int: return self.y.shape[0]
 
@@ -53,6 +55,20 @@ class ExoplanetDataset(Dataset):
         xt = None if self.xt is None else self.xt[i]
         y = self.y[i] #scalar float
 
-        if self.ids is None:
-            return xg, xl, xt, y
-        else: return xg, xl, xt, y, self.ids[i]
+        return xg, xl, xt, y, self.ids[i]
+
+def collate(batch):
+    xg, xl, xt, y, ids = zip(*batch)
+
+    xg = torch.stack(xg,0)
+    xl = torch.stack(xl,0)
+    y = torch.stack(y, 0)
+
+    # if tabular exists collate
+    if xt[0] is None:
+        xt = None
+    else:
+        xt = torch.stack(xt, 0)
+
+    return xg, xl, xt, y, list(ids)
+
