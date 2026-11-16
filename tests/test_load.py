@@ -1,20 +1,21 @@
-import os
+from pathlib import Path
 
 import numpy as np
 import pytest
 
-from src.preprocessing.load import ROOT, from_dir, from_s3
+from src.preprocessing.load import from_dir, from_s3
 
-TEST_DIR = os.path.join(ROOT, "data/test/test_lc_data")
-KEPID = 11442793  # 3 quarter files in TEST_DIR
+TEST_DIR = Path(__file__).resolve().parents[1] / "data" / "test"
+KEPID = 11446443  # Kepler-1b, 15 quarter files in TEST_DIR
+QUARTERS = [0, 1, 2, 3, 4, 5, 6, 7, 9, 10, 11, 13, 14, 15, 17]
 
 
 def test_from_dir():
     qs = from_dir(KEPID, TEST_DIR)
-    assert [q["quarter"] for q in qs] == [3, 4, 5]
+    assert [q.quarter for q in qs] == QUARTERS
     for q in qs:
-        assert len(q["time"]) == len(q["flux"]) == len(q["quality"]) > 0
-        assert q["flux"].dtype == np.float64
+        assert len(q.time) == len(q.flux) == len(q.quality) > 0
+        assert q.flux.dtype == np.float64
 
 
 def test_from_dir_missing_star():
@@ -24,8 +25,8 @@ def test_from_dir_missing_star():
 
 @pytest.mark.network
 def test_from_s3_matches_dir():
-    local = {q["quarter"]: q for q in from_dir(KEPID, TEST_DIR)}
-    remote = [q for q in from_s3(KEPID) if q["quarter"] in local]
+    local = {q.quarter: q for q in from_dir(KEPID, TEST_DIR)}
+    remote = [q for q in from_s3(KEPID) if q.quarter in local]
     assert len(remote) == len(local)
     for q in remote:
-        np.testing.assert_array_equal(q["flux"], local[q["quarter"]]["flux"])
+        np.testing.assert_array_equal(q.flux, local[q.quarter].flux)
