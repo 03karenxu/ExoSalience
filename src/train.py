@@ -13,6 +13,8 @@ torch.backends.cudnn.benchmark = True
 torch.manual_seed(42); np.random.seed(42)
 print("Device:", device)
 
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
 def train_epoch(model, dloader, optim, criterion):
     model.train()
     total, n = 0.0, 0
@@ -109,8 +111,8 @@ def main():
     # load npz for train / test
     import numpy as np
 
-    npz_train = np.load("npzs/train.npz")
-    npz_test = np.load("npzs/test.npz")
+    npz_train = np.load(os.path.join(ROOT, "data/processed/train.npz"))
+    npz_test = np.load(os.path.join(ROOT, "data/processed/test.npz"))
 
     # create train / test set from numpy
     global_train = torch.from_numpy(npz_train['global_view']).float()
@@ -154,7 +156,7 @@ def main():
 
 
     # make & save config / checkpoints dir
-    save_dir = "checkpoints"
+    save_dir = os.path.join(ROOT, "models/checkpoints")
     os.makedirs(save_dir, exist_ok=True)
 
     # make & save config
@@ -202,7 +204,7 @@ def main():
     model.eval()
     model_cpu = copy.deepcopy(model).cpu()
     scripted = torch.jit.script(model_cpu)
-    scripted.save("model_scripted.pt")
+    scripted.save(os.path.join(ROOT, "models/model_scripted.pt"))
 
     
 if __name__ == "__main__":

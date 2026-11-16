@@ -13,8 +13,8 @@ def test_upload_endpoint(tmp_path):
     """
 
     # --- Create dummy CSV ---
-    csv_path = "test_tce.csv"
-    zipfold_path = "test_lc_data.zip"
+    csv_path = "data/test/test_tce.csv"
+    zipfold_path = "data/test/test_lc_data.zip"
 
     # --- Upload files ---
     with open(csv_path, "rb") as csv_f, open(fits_path, "rb") as fits_f:

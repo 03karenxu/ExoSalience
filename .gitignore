@@ -1,2 +1,7 @@
 tmp/
 *.pyc
+archive/
+data/
+.DS_Store
+*.env
+PLAN.md
