@@ -24,10 +24,10 @@ class FoldedCurve:
     flux_err: np.ndarray
 
 @dataclass
-class ProcessedData:
+class ModelInput:
     kepid: int
+    tce_plnt_num: int
     global_view: np.ndarray
     local_view: np.ndarray
-    label: str
-
-    
+    label: int
+    tabular: np.ndarray | None = None

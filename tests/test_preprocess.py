@@ -34,3 +34,21 @@ def test_fold_bin_fill_rescale():
 
     assert list(fill_gaps(np.array([1.0, np.nan, 3.0]))) == [1.0, 2.0, 3.0]
     assert list(rescale(np.array([1.0, 1.0, 0.98, 1.0]))) == [0.0, 0.0, -1.0, 0.0]
+
+
+def test_preprocess_matches_steps_for_test_stars():
+    from pathlib import Path
+
+    from src.preprocessing.load import from_dir
+    from src.preprocessing.preprocess import preprocess
+
+    root = Path(__file__).resolve().parents[1]
+    catalogue = pd.read_csv(root / "data" / "dr24-tce-2.csv")
+    for kepid in (11446443, 4912991, 9906802):
+        tces = catalogue[catalogue.kepid == kepid]
+        views = preprocess(kepid, from_dir(kepid, root / "data" / "test"), tces)
+        assert [v[0] for v in views] == tces.tce_plnt_num.tolist()
+        for _, global_view, local_view in views:
+            assert global_view.shape == (2001,) and local_view.shape == (201,)
+            assert np.isfinite(global_view).all() and np.isfinite(local_view).all()
+            assert global_view.min() == -1 and local_view.min() == -1

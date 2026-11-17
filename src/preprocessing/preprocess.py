@@ -154,3 +154,20 @@ def rescale(view: np.ndarray) -> np.ndarray:
     """shift and scale so the baseline is 0 and the deepest point is -1"""
     view = view - np.median(view)
     return view / np.abs(view.min())
+
+
+def preprocess(kepid: int, quarters: list[Quarter], tces: pd.DataFrame) -> list[tuple[int, np.ndarray, np.ndarray]]:
+    """
+    turn one star's raw quarters into a (tce_plnt_num, global_view, local_view) per TCE
+
+    tces: all of the star's TCE rows (including UNK), in the order the views are returned
+    """
+    quarters = [scale(q) for q in map(drop_bad_points, quarters) if len(q.flux)]
+    flat = fit_curve_to_spline(stitch_quarters(kepid, quarters), tces)
+    views = []
+    for tce in tces.itertuples():
+        folded = phase_fold(flat, tce.tce_period, tce.tce_time0bk)
+        global_view = bin(folded, 2001, tce.tce_period / 2)
+        local_view = bin(folded, 201, min(4 * tce.tce_duration / 24, tce.tce_period / 2))
+        views.append((tce.tce_plnt_num, rescale(fill_gaps(global_view)), rescale(fill_gaps(local_view))))
+    return views

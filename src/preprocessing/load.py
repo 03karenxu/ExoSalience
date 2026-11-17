@@ -17,6 +17,7 @@ from_dir(kepid) and from_s3(kepid) both return one Quarter per quarter file, sor
 """
 
 import numpy as np
+import pandas as pd
 from pathlib import Path
 from typing import BinaryIO
 
