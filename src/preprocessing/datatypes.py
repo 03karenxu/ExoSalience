@@ -26,7 +26,7 @@ class FoldedCurve:
 @dataclass
 class ModelInput:
     kepid: int
-    tce_plnt_num: int
+    planet_num: int
     global_view: np.ndarray
     local_view: np.ndarray
     label: int

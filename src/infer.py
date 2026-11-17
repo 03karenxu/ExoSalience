@@ -1,10 +1,11 @@
-import os
 import torch
 from typing import Optional, Union, Sequence
 import numpy as np
 
+from src.paths import MODELS_DIR
+
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-MODEL_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "models/model_scripted.pt")
+MODEL_PATH = MODELS_DIR / "tce_catalogue" / "model_scripted.pt"
 model = torch.jit.load(MODEL_PATH, map_location=DEVICE)
 model.eval()
 

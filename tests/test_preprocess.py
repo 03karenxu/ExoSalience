@@ -5,7 +5,7 @@ from src.preprocessing.datatypes import StarCurve
 from src.preprocessing.preprocess import bin, fill_gaps, fit_curve_to_spline, phase_fold, rescale
 
 # fake star: slow 1% wiggle, 0.5% transits every 3 days lasting 2.4 hours, a 5-day gap
-TCES = pd.DataFrame({"tce_period": [3.0], "tce_time0bk": [1.0], "tce_duration": [2.4]})
+SIGNALS = pd.DataFrame({"period": [3.0], "t0": [1.0], "duration": [2.4]})
 
 
 def test_spline_flattens_baseline_and_keeps_dips():
@@ -16,7 +16,7 @@ def test_spline_flattens_baseline_and_keeps_dips():
     flux = (1 + 0.01 * np.sin(2 * np.pi * t / 10)) * np.where(in_transit, 0.995, 1.0)
     flux += rng.normal(0, 1e-4, len(t))
 
-    flat = fit_curve_to_spline(StarCurve(kepid=1, time=t, flux=flux, flux_err=np.full(len(t), 1e-4)), TCES)
+    flat = fit_curve_to_spline(StarCurve(kepid=1, time=t, flux=flux, flux_err=np.full(len(t), 1e-4)), SIGNALS)
 
     assert len(flat.time) == len(t)
     assert np.std(flat.flux[~in_transit]) < 2e-4  # 1% wiggle removed, only noise left
@@ -37,17 +37,16 @@ def test_fold_bin_fill_rescale():
 
 
 def test_preprocess_matches_steps_for_test_stars():
-    from pathlib import Path
-
+    from src.paths import DATA_DIR
+    from src.preprocessing.build_dataset import load_catalogue
     from src.preprocessing.load import from_dir
     from src.preprocessing.preprocess import preprocess
 
-    root = Path(__file__).resolve().parents[1]
-    catalogue = pd.read_csv(root / "data" / "dr24-tce-2.csv")
+    catalogue = load_catalogue(DATA_DIR / "tce_catalogue.csv")
     for kepid in (11446443, 4912991, 9906802):
-        tces = catalogue[catalogue.kepid == kepid]
-        views = preprocess(kepid, from_dir(kepid, root / "data" / "test"), tces)
-        assert [v[0] for v in views] == tces.tce_plnt_num.tolist()
+        signals = catalogue[catalogue.kepid == kepid]
+        views = preprocess(kepid, from_dir(kepid, DATA_DIR / "test"), signals)
+        assert [v[0] for v in views] == signals.planet_num.tolist()
         for _, global_view, local_view in views:
             assert global_view.shape == (2001,) and local_view.shape == (201,)
             assert np.isfinite(global_view).all() and np.isfinite(local_view).all()

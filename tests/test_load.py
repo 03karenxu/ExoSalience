@@ -1,11 +1,11 @@
-from pathlib import Path
 
 import numpy as np
 import pytest
 
+from src.paths import DATA_DIR
 from src.preprocessing.load import from_dir, from_s3
 
-TEST_DIR = Path(__file__).resolve().parents[1] / "data" / "test"
+TEST_DIR = DATA_DIR / "test"
 KEPID = 11446443  # Kepler-1b, 15 quarter files in TEST_DIR
 QUARTERS = [0, 1, 2, 3, 4, 5, 6, 7, 9, 10, 11, 13, 14, 15, 17]
 

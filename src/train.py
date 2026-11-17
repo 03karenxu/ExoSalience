@@ -1,4 +1,5 @@
-import os, json, math, time
+import argparse, os, json, math, time
+from pathlib import Path
 import torch
 import numpy as np
 from torch import nn
@@ -7,6 +8,7 @@ from sklearn.metrics import roc_auc_score, precision_recall_curve
 
 from cnn import CNN1DEncoder, AstronetMVP
 from dataset import ExoplanetDataset, collate
+from paths import DATA_DIR, MODELS_DIR
 
     
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -14,7 +16,6 @@ torch.backends.cudnn.benchmark = True
 torch.manual_seed(42); np.random.seed(42)
 print("Device:", device)
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 def train_epoch(model, dloader, optim, criterion):
     model.train()
@@ -112,17 +113,16 @@ def predict_on_loader(model, dloader):
             out.append({"id": _id, "logit": float(lo), "prob": float(pr)})
     return out
 
-def main():
+def main(data):
     # DATA
-    # load npz for train / test
-    import numpy as np
+    # load npz for train / test from the folder build_dataset wrote; data is relative to data/, e.g. processed/tce_catalogue
+    data_dir = DATA_DIR / data
+    npz_train = np.load(os.path.join(data_dir, "train.npz"))
+    npz_test = np.load(os.path.join(data_dir, "test.npz"))
 
-    npz_train = np.load(os.path.join(ROOT, "data/processed/train.npz"))
-    npz_test = np.load(os.path.join(ROOT, "data/processed/test.npz"))
-
-    # create a dataset from the rows of an npz selected by mask; ids are (kepid, tce_plnt_num)
+    # create a dataset from the rows of an npz selected by mask; ids are (kepid, planet_num)
     def make_dataset(npz, mask):
-        ids = list(zip(npz['kepid'][mask].tolist(), npz['tce_plnt_num'][mask].tolist()))
+        ids = list(zip(npz['kepid'][mask].tolist(), npz['planet_num'][mask].tolist()))
         return ExoplanetDataset(
             torch.from_numpy(npz['global_view'][mask]).float(),
             torch.from_numpy(npz['local_view'][mask]).float(),
@@ -168,7 +168,9 @@ def main():
 
 
     # make & save config / checkpoints dir
-    save_dir = os.path.join(ROOT, "models/checkpoints")
+    # model files go to models/<dataset folder name>, e.g. models/tce_catalogue
+    model_dir = MODELS_DIR / Path(data).name
+    save_dir = os.path.join(model_dir, "checkpoints")
     os.makedirs(save_dir, exist_ok=True)
 
     # make & save config
@@ -236,8 +238,11 @@ def main():
     model.eval()
     model_cpu = copy.deepcopy(model).cpu()
     scripted = torch.jit.script(model_cpu)
-    scripted.save(os.path.join(ROOT, "models/model_scripted.pt"))
+    scripted.save(os.path.join(model_dir, "model_scripted.pt"))
 
     
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--data", required=True,
+                        help="folder inside data/ containing train.npz and test.npz, e.g. processed/tce_catalogue")
+    main(parser.parse_args().data)

@@ -75,7 +75,7 @@ def _spline_knots(t: np.ndarray, spacing: float, min_points: int = 4) -> np.ndar
 
 def fit_curve_to_spline(
         c: StarCurve,
-        tces: pd.DataFrame,
+        signals: pd.DataFrame,
         spacing: float = 1.5,
         min_gap: float = 0.75,
         sigma: float = 3.0,
@@ -83,16 +83,16 @@ def fit_curve_to_spline(
     """
     divide the curve by a cubic spline fitted to its out-of-transit points
 
-    tces: all of the star's TCE rows
+    signals: all of the star's signals, with period (days), t0 (BKJD) and duration (hours) columns
     spacing: days between knots
     min_gap: split into segments at gaps longer than this (days)
     sigma, max_iter: refit after dropping points more than sigma robust stds from the fit
     """
     # build transit mask
     in_transit = np.zeros(len(c.time), dtype=bool)
-    for _, tce in tces.iterrows():
-        # a point is in transit if mask returns True for any of this star's TCEs
-        in_transit |= _transit_mask(c.time, tce.tce_period, tce.tce_time0bk, tce.tce_duration)
+    for signal in signals.itertuples():
+        # a point is in transit if mask returns True for any of this star's signals
+        in_transit |= _transit_mask(c.time, signal.period, signal.t0, signal.duration)
 
     baseline = np.full(len(c.time), np.nan)
     # split curve into segments
@@ -156,18 +156,19 @@ def rescale(view: np.ndarray) -> np.ndarray:
     return view / np.abs(view.min())
 
 
-def preprocess(kepid: int, quarters: list[Quarter], tces: pd.DataFrame) -> list[tuple[int, np.ndarray, np.ndarray]]:
+def preprocess(kepid: int, quarters: list[Quarter], signals: pd.DataFrame) -> list[tuple[int, np.ndarray, np.ndarray]]:
     """
-    turn one star's raw quarters into a (tce_plnt_num, global_view, local_view) per TCE
+    turn one star's raw quarters into a (planet_num, global_view, local_view) per signal
 
-    tces: all of the star's TCE rows (including UNK), in the order the views are returned
+    signals: all of the star's signals (including unlabelled ones, so they get masked), with period, t0,
+             duration and planet_num columns; views are returned in the same order
     """
     quarters = [scale(q) for q in map(drop_bad_points, quarters) if len(q.flux)]
-    flat = fit_curve_to_spline(stitch_quarters(kepid, quarters), tces)
+    flat = fit_curve_to_spline(stitch_quarters(kepid, quarters), signals)
     views = []
-    for tce in tces.itertuples():
-        folded = phase_fold(flat, tce.tce_period, tce.tce_time0bk)
-        global_view = bin(folded, 2001, tce.tce_period / 2)
-        local_view = bin(folded, 201, min(4 * tce.tce_duration / 24, tce.tce_period / 2))
-        views.append((tce.tce_plnt_num, rescale(fill_gaps(global_view)), rescale(fill_gaps(local_view))))
+    for signal in signals.itertuples():
+        folded = phase_fold(flat, signal.period, signal.t0)
+        global_view = bin(folded, 2001, signal.period / 2)
+        local_view = bin(folded, 201, min(4 * signal.duration / 24, signal.period / 2))
+        views.append((signal.planet_num, rescale(fill_gaps(global_view)), rescale(fill_gaps(local_view))))
     return views

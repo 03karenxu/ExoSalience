@@ -1,28 +1,49 @@
 from pathlib import Path
 
 import numpy as np
+import pytest
 
-from src.preprocessing.build_dataset import main
+from src.paths import DATA_DIR
+from src.preprocessing.build_dataset import load_catalogue, main
 
-ROOT = Path(__file__).resolve().parents[1]
-STARS = {11446443: 1, 4912991: 0, 9906802: 0}  # PC, AFP, NTP in data/test
+DR24 = DATA_DIR / "tce_catalogue.csv"
+KOI = DATA_DIR / "koi_catalogue.csv"
 
 
-def test_build_dataset_from_test_stars(tmp_path):
-    main(ROOT / "data" / "dr24-tce-2.csv", mast_dir=ROOT / "data" / "test", workers=2, out_dir=tmp_path)
-    train, test = np.load(tmp_path / "train.npz"), np.load(tmp_path / "test.npz")
-
+def _check_outputs(out_dir: Path, catalogue_path: Path):
+    """train/test share no stars, views have the right shapes, labels match the catalogue"""
+    train, test = np.load(out_dir / "train.npz"), np.load(out_dir / "test.npz")
     assert set(train["kepid"]).isdisjoint(test["kepid"])
-    assert set(train["kepid"]) | set(test["kepid"]) == set(STARS)
+
+    catalogue = load_catalogue(catalogue_path).set_index(["kepid", "planet_num"])
     for d in (train, test):
         n = len(d["label"])
         assert d["global_view"].shape == (n, 2001) and d["local_view"].shape == (n, 201)
-        assert {int(k): int(l) for k, l in zip(d["kepid"], d["label"])}.items() <= STARS.items()
+        for kepid, planet_num, label in zip(d["kepid"], d["planet_num"], d["label"]):
+            assert catalogue.loc[(kepid, planet_num), "is_exoplanet"] == label
 
 
-def test_build_dataset_resumes_from_chunks(tmp_path):
-    main(ROOT / "data" / "dr24-tce-2.csv", mast_dir=ROOT / "data" / "test", workers=2, out_dir=tmp_path)
+@pytest.mark.network
+def test_build_dataset_and_resume(tmp_path):
+    main(DR24, limit=3, workers=2, out_dir=tmp_path)
+    _check_outputs(tmp_path, DR24)
+
+    # a second run reuses the saved chunks instead of rebuilding them
     chunk = next((tmp_path / "chunks").glob("*/train_0000.npz"))
     mtime = chunk.stat().st_mtime
-    main(ROOT / "data" / "dr24-tce-2.csv", mast_dir=ROOT / "data" / "test", workers=2, out_dir=tmp_path)
+    main(DR24, limit=3, workers=2, out_dir=tmp_path)
     assert chunk.stat().st_mtime == mtime
+
+
+@pytest.mark.network
+def test_build_dataset_from_koi_table(tmp_path):
+    koi_csv = KOI
+    main(koi_csv, limit=3, workers=2, out_dir=tmp_path)
+    _check_outputs(tmp_path, koi_csv)
+
+
+def test_load_catalogue_generic_columns():
+    for path in (DR24, KOI):
+        catalogue = load_catalogue(path)
+        assert {"kepid", "period", "t0", "duration", "planet_num", "is_exoplanet"} <= set(catalogue.columns)
+        assert set(catalogue.is_exoplanet.dropna().unique()) == {0, 1}
