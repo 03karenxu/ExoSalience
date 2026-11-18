@@ -160,7 +160,13 @@ def main(data):
     xg0, xl0, xt0, y0, ids0 = next(iter(dl_train))
     tabular_dim = 0 if xt0 is None else xt0.shape[1]
 
-    model = AstronetMVP(hidden=64, k_global=7, k_local=5, tabular_dim=tabular_dim).to(device)
+    model_kwargs = {"global_channels": [16, 32, 64, 128], "local_channels": [16, 32],
+                    "kernel_size": 5, "head_hidden": 256, "dropout": 0.3}
+    model = AstronetMVP(**model_kwargs, tabular_dim=tabular_dim).to(device)
+    # LazyLinear sets its input size on the first forward pass; run one before the optimizer collects the weights
+    with torch.no_grad():
+        model(xg0.to(device), xl0.to(device), None)
+    print(f"model: {sum(p.numel() for p in model.parameters()):,} weights")
 
     pos_weight = compute_pos_weight_from_loader(dl_train)
     criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weight) if pos_weight is not None else nn.BCEWithLogitsLoss()
@@ -175,9 +181,7 @@ def main(data):
 
     # make & save config
     config = {
-        "hidden":64,
-        "k_global": 7,
-        "k_local": 5,
+        **model_kwargs,
         "tabular_dim": tabular_dim,
         "lr": 1e-3,
         "wd": 1e-5,

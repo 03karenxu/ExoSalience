@@ -1,7 +1,7 @@
 """
 build train.npz / test.npz from a catalogue of signals (DR24 TCE catalogue or KOI table) and Kepler light curves on S3
 
-usage: uv run python -m src.preprocessing.build_dataset --input <csv path inside data/> [--name <name>] [--limit <n>] [--workers <n>]
+usage: uv run python -m src.preprocessing.build_dataset --input <csv file name> [--name <name>] [--limit <n>] [--workers <n>]
 writes to data/processed/<name>/, where name defaults to the input file name:
     --input tce_catalogue.csv  ->  data/processed/tce_catalogue/train.npz, test.npz
 """
